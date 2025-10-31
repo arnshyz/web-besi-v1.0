@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, safePrismaQuery } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
 
 export default async function NewCategory() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const cats = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const catsResult = await safePrismaQuery(
+    prisma.category.findMany({ orderBy: { name: "asc" } })
+  );
+  if (catsResult.status === "skipped") {
+    return <div>{catsResult.message}</div>;
+  }
+  const cats = catsResult.data;
 
   async function create(formData: FormData) {
     "use server";

@@ -1,10 +1,13 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function TestimoniPage() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const items = await prisma.testimonial.findMany({ orderBy: { createdAt: "desc" } });
+  const itemsResult = await safePrismaQuery(
+    prisma.testimonial.findMany({ orderBy: { createdAt: "desc" } })
+  );
+  const items = itemsResult.status === "success" ? itemsResult.data : [];
 
   async function add(formData: FormData) {
     "use server";
@@ -39,6 +42,13 @@ export default async function TestimoniPage() {
                 <td><form action={del}><input type="hidden" name="id" value={s.id}/><button className="btn">Hapus</button></form></td>
               </tr>
             ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={3}>
+                  {itemsResult.status === "skipped" ? itemsResult.message : "Belum ada testimoni."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
