@@ -1,11 +1,23 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function EditCategory({ params }: { params: { id: string } }) {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const c = await prisma.category.findUnique({ where: { id: params.id } });
-  const cats = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const categoryResult = await safePrismaQuery(
+    prisma.category.findUnique({ where: { id: params.id } })
+  );
+  const listResult = await safePrismaQuery(
+    prisma.category.findMany({ orderBy: { name: "asc" } })
+  );
+  if (categoryResult.status === "skipped") {
+    return <div>{categoryResult.message}</div>;
+  }
+  if (listResult.status === "skipped") {
+    return <div>{listResult.message}</div>;
+  }
+  const c = categoryResult.data;
+  const cats = listResult.data;
   if (!c) redirect("/admin/kategori");
 
   async function save(formData: FormData) {

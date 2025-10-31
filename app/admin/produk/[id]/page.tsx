@@ -1,10 +1,16 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function EditProduct({ params }: { params: { id: string } }) {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const p = await prisma.product.findUnique({ where: { id: params.id } });
+  const productResult = await safePrismaQuery(
+    prisma.product.findUnique({ where: { id: params.id } })
+  );
+  if (productResult.status === "skipped") {
+    return <div>{productResult.message}</div>;
+  }
+  const p = productResult.data;
   if (!p) redirect("/admin/produk");
 
   async function save(formData: FormData) {

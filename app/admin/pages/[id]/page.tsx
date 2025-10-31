@@ -1,10 +1,16 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function EditPage({ params }: { params: { id: string } }) {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const p = await prisma.page.findUnique({ where: { id: params.id } });
+  const pageResult = await safePrismaQuery(
+    prisma.page.findUnique({ where: { id: params.id } })
+  );
+  if (pageResult.status === "skipped") {
+    return <div>{pageResult.message}</div>;
+  }
+  const p = pageResult.data;
   if (!p) redirect("/admin/pages");
 
   async function save(formData: FormData) {
