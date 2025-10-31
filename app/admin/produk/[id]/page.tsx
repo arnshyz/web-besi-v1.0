@@ -1,25 +1,54 @@
-import { prisma } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function EditProduct({ params }: { params: { id: string } }) {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const p = await prisma.product.findUnique({ where: { id: params.id } });
+  const productResult = await safePrismaQuery(
+    prisma.product.findUnique({ where: { id: params.id } })
+  );
+  if (productResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(productResult.reason, "admin")}</div>;
+  }
+  const p = productResult.data;
   if (!p) redirect("/admin/produk");
 
   async function save(formData: FormData) {
     "use server";
+    if (!p) {
+      throw new Error("Product not found");
+    }
     const name = String(formData.get("name") || "");
     const slug = String(formData.get("slug") || "");
     const priceMin = formData.get("priceMin") ? Number(formData.get("priceMin")) : null;
     const featured = formData.get("featured") === "on";
-    await prisma.product.update({ where: { id: p.id }, data: { name, slug, priceMin, featured } });
+    const result = await safePrismaAction(() =>
+      prisma.product.update({ where: { id: p.id }, data: { name, slug, priceMin, featured } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/produk");
   }
 
   async function remove() {
     "use server";
-    await prisma.product.delete({ where: { id: p.id } });
+    if (!p) {
+      throw new Error("Product not found");
+    }
+    const result = await safePrismaAction(() =>
+      prisma.product.delete({ where: { id: p.id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/produk");
   }
 

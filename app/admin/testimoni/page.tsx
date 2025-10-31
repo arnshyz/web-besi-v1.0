@@ -1,22 +1,44 @@
-import { prisma } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function TestimoniPage() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const items = await prisma.testimonial.findMany({ orderBy: { createdAt: "desc" } });
+  const itemsResult = await safePrismaQuery(
+    prisma.testimonial.findMany({ orderBy: { createdAt: "desc" } })
+  );
+  if (itemsResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(itemsResult.reason, "admin")}</div>;
+  }
+
+  const items = itemsResult.data;
 
   async function add(formData: FormData) {
     "use server";
     const author = String(formData.get("author")||"");
     const content = String(formData.get("content")||"");
-    await prisma.testimonial.create({ data: { author, content } });
+    const result = await safePrismaAction(() =>
+      prisma.testimonial.create({ data: { author, content } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   async function del(formData: FormData) {
     "use server";
     const id = String(formData.get("id")||"");
-    await prisma.testimonial.delete({ where: { id } });
+    const result = await safePrismaAction(() =>
+      prisma.testimonial.delete({ where: { id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   return (
@@ -39,6 +61,13 @@ export default async function TestimoniPage() {
                 <td><form action={del}><input type="hidden" name="id" value={s.id}/><button className="btn">Hapus</button></form></td>
               </tr>
             ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={3}>
+                  Belum ada testimoni.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

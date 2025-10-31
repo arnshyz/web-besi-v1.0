@@ -1,15 +1,31 @@
-import { prisma } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function SettingPage() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const s = await prisma.setting.upsert({ where: { id: 1 }, update: {}, create: { id:1 } });
+  const settingResult = await safePrismaQuery(
+    prisma.setting.upsert({ where: { id: 1 }, update: {}, create: { id:1 } })
+  );
+  if (settingResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(settingResult.reason, "admin")}</div>;
+  }
+  const s = settingResult.data;
 
   async function save(formData: FormData) {
     "use server";
     const waNumber = String(formData.get("waNumber")||"");
-    await prisma.setting.update({ where: { id: 1 }, data: { waNumber } });
+    const result = await safePrismaAction(() =>
+      prisma.setting.update({ where: { id: 1 }, data: { waNumber } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   return (

@@ -1,32 +1,92 @@
-import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProdukDetail({ params }: { params: { slug: string } }) {
-  const product = await prisma.product.findUnique({ where: { slug: params.slug }, include: { variants: true, images: true, category: true } });
+  const productResult = await safePrismaQuery(
+    prisma.product.findUnique({ where: { slug: params.slug }, include: { variants: true, images: true, category: true } })
+  );
+  if (productResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(productResult.reason)}</div>;
+  }
+  const product = productResult.data;
   if (!product) return <div>Produk tidak ditemukan.</div>;
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+  const waHref = wa ? `https://wa.me/${wa}` : undefined;
   const price = product.priceMin != null ? `Mulai Rp ${product.priceMin.toLocaleString("id-ID")}` : "Hubungi CS";
+  const description = product.description || product.summary || "Hubungi tim kami untuk informasi detail spesifikasi produk.";
+  const heroImage = product.images[0]?.url;
 
   return (
-    <div className="grid" style={{gridTemplateColumns:"1fr 1fr"}}>
-      <div className="card">
-        {product.images[0] ? <img src={product.images[0].url} alt={product.images[0].alt || product.name} style={{width:"100%", borderRadius:12}}/> : <div className="card">Tidak ada gambar</div>}
-      </div>
-      <div className="card">
-        <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
-        <div className="text-sm" style={{color:"#777"}}>{product.category?.name}</div>
-        <div className="mt-2">{price}</div>
-        <div className="mt-4">{product.description || "—"}</div>
-        <a className="btn mt-4" href={`https://wa.me/${wa}?text=Halo%20saya%20ingin%20tanya%20produk%20${encodeURIComponent(product.name)}`}>Dapatkan Penawaran</a>
-        <div className="mt-4">
-          <b>Varian</b>
-          <ul>
-            {product.variants.map(v => (
-              <li key={v.id} className="text-sm">{v.name} {v.price != null ? `- Rp ${v.price.toLocaleString("id-ID")}` : ""}</li>
-            ))}
-            {product.variants.length===0 && <li className="text-sm">Tidak ada varian.</li>}
-          </ul>
+    <section className="section">
+      <div className="container">
+        <nav className="breadcrumb">
+          <Link href="/">Beranda</Link>
+          <span>/</span>
+          <Link href="/produk">Produk</Link>
+          <span>/</span>
+          <span>{product.name}</span>
+        </nav>
+
+        <div className="product-detail">
+          <div className="product-gallery">
+            {heroImage ? (
+              <img src={heroImage} alt={product.images[0]?.alt || product.name} />
+            ) : (
+              <div className="card card-muted">Gambar produk belum tersedia.</div>
+            )}
+          </div>
+
+          <div className="product-info card">
+            <span className="section-eyebrow" style={{ color: "var(--muted)" }}>{product.category?.name || "Produk"}</span>
+            <h1 className="section-title" style={{ marginBottom: 12 }}>{product.name}</h1>
+            <div className="product-price">{price}</div>
+            <p className="product-description">{description}</p>
+            {waHref && (
+              <a
+                className="btn"
+                href={`${waHref}?text=Halo%20saya%20ingin%20tanya%20produk%20${encodeURIComponent(product.name)}`}
+              >
+                Dapatkan Penawaran
+              </a>
+            )}
+
+            <div className="product-meta">
+              <div>
+                <span className="meta-label">ID Produk</span>
+                <strong>{product.slug}</strong>
+              </div>
+              <div>
+                <span className="meta-label">Terakhir diperbarui</span>
+                <strong>{product.updatedAt.toLocaleDateString("id-ID")}</strong>
+              </div>
+            </div>
+
+            <div className="variant-block">
+              <h2>Varian &amp; Spesifikasi</h2>
+              {product.variants.length === 0 ? (
+                <p className="variant-empty">Belum ada varian yang tercatat.</p>
+              ) : (
+                <ul>
+                  {product.variants.map((variant) => (
+                    <li key={variant.id}>
+                      <strong>{variant.name}</strong>
+                      {variant.price != null ? <span>Rp {variant.price.toLocaleString("id-ID")}</span> : null}
+                      {variant.stock != null ? <span>Stok: {variant.stock}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card detail-description">
+          <h2 style={{ marginTop: 0 }}>Informasi tambahan</h2>
+          <p style={{ marginBottom: 0 }}>{product.description || "Detail spesifikasi dapat disesuaikan berdasarkan kebutuhan proyek."}</p>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
