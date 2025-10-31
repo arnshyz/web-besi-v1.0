@@ -1,4 +1,9 @@
-import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -28,7 +33,13 @@ export default async function EditCategory({ params }: { params: { id: string } 
     const name = String(formData.get("name") || "");
     const slug = String(formData.get("slug") || "");
     const parentId = String(formData.get("parentId") || "") || null;
-    await prisma.category.update({ where: { id: c.id }, data: { name, slug, parentId: parentId || null } });
+    const result = await safePrismaAction(() =>
+      prisma.category.update({ where: { id: c.id }, data: { name, slug, parentId: parentId || null } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/kategori");
   }
 
@@ -37,7 +48,13 @@ export default async function EditCategory({ params }: { params: { id: string } 
     if (!c) {
       throw new Error("Category not found");
     }
-    await prisma.category.delete({ where: { id: c.id } });
+    const result = await safePrismaAction(() =>
+      prisma.category.delete({ where: { id: c.id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/kategori");
   }
 

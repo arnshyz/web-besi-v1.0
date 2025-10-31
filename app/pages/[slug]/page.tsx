@@ -1,6 +1,8 @@
 import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function CmsPage({ params }: { params: { slug: string } }) {
   const pageResult = await safePrismaQuery(
     prisma.page.findUnique({ where: { slug: params.slug } })

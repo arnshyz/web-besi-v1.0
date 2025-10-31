@@ -24,27 +24,45 @@ export function isPrismaInitializationError(error: unknown): error is Prisma.Pri
   return error instanceof Prisma.PrismaClientInitializationError;
 }
 
-export async function safePrismaQuery<T>(promise: Promise<T>): Promise<SafePrismaResult<T>> {
+function mapPrismaErrorToSkipResult(error: unknown): SafePrismaResult<never> | null {
+  if (isPrismaMissingTableError(error)) {
+    const meta = typeof error.meta === "object" && error.meta !== null ? error.meta : undefined;
+    const modelName = typeof meta?.modelName === "string" ? meta.modelName : undefined;
+    const message = modelName
+      ? `Prisma table for model "${modelName}" is missing. Skipping query.`
+      : "Prisma table is missing. Skipping query.";
+    console.warn(message);
+    return { status: "skipped", reason: "missing-table" };
+  }
+
+  if (isPrismaInitializationError(error)) {
+    const message = "Prisma client could not initialize. Ensure the DATABASE_URL environment variable is set.";
+    console.warn(message);
+    return { status: "skipped", reason: "client-init" };
+  }
+
+  return null;
+}
+
+async function runSafePrismaCall<T>(callback: () => Promise<T>): Promise<SafePrismaResult<T>> {
   try {
-    const data = await promise;
+    const data = await callback();
     return { status: "success", data };
   } catch (error) {
-    if (isPrismaMissingTableError(error)) {
-      const meta = typeof error.meta === "object" && error.meta !== null ? error.meta : undefined;
-      const modelName = typeof meta?.modelName === "string" ? meta.modelName : undefined;
-      const message = modelName
-        ? `Prisma table for model "${modelName}" is missing. Skipping query.`
-        : "Prisma table is missing. Skipping query.";
-      console.warn(message);
-      return { status: "skipped", reason: "missing-table" };
-    }
-    if (isPrismaInitializationError(error)) {
-      const message = "Prisma client could not initialize. Ensure the DATABASE_URL environment variable is set.";
-      console.warn(message);
-      return { status: "skipped", reason: "client-init" };
+    const handled = mapPrismaErrorToSkipResult(error);
+    if (handled) {
+      return handled;
     }
     throw error;
   }
+}
+
+export async function safePrismaQuery<T>(promise: Promise<T>): Promise<SafePrismaResult<T>> {
+  return runSafePrismaCall(() => promise);
+}
+
+export async function safePrismaAction<T>(callback: () => Promise<T>): Promise<SafePrismaResult<T>> {
+  return runSafePrismaCall(callback);
 }
 
 export function prismaUnavailableMessage(

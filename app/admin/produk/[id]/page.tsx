@@ -1,4 +1,9 @@
-import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -22,7 +27,13 @@ export default async function EditProduct({ params }: { params: { id: string } }
     const slug = String(formData.get("slug") || "");
     const priceMin = formData.get("priceMin") ? Number(formData.get("priceMin")) : null;
     const featured = formData.get("featured") === "on";
-    await prisma.product.update({ where: { id: p.id }, data: { name, slug, priceMin, featured } });
+    const result = await safePrismaAction(() =>
+      prisma.product.update({ where: { id: p.id }, data: { name, slug, priceMin, featured } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/produk");
   }
 
@@ -31,7 +42,13 @@ export default async function EditProduct({ params }: { params: { id: string } }
     if (!p) {
       throw new Error("Product not found");
     }
-    await prisma.product.delete({ where: { id: p.id } });
+    const result = await safePrismaAction(() =>
+      prisma.product.delete({ where: { id: p.id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/produk");
   }
 

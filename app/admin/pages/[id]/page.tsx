@@ -1,4 +1,9 @@
-import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -21,7 +26,13 @@ export default async function EditPage({ params }: { params: { id: string } }) {
     const title = String(formData.get("title") || "");
     const slug = String(formData.get("slug") || "");
     const content = String(formData.get("content") || "");
-    await prisma.page.update({ where: { id: p.id }, data: { title, slug, content } });
+    const result = await safePrismaAction(() =>
+      prisma.page.update({ where: { id: p.id }, data: { title, slug, content } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/pages");
   }
 
@@ -30,7 +41,11 @@ export default async function EditPage({ params }: { params: { id: string } }) {
     if (!p) {
       throw new Error("Page not found");
     }
-    await prisma.page.delete({ where: { id: p.id } });
+    const result = await safePrismaAction(() => prisma.page.delete({ where: { id: p.id } }));
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/pages");
   }
 

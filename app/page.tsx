@@ -1,6 +1,8 @@
 import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [slidesResult, partnersResult, testimonialsResult] = await Promise.all([
     safePrismaQuery(prisma.heroSlide.findMany({ orderBy: { sort: "asc" } })),

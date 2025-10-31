@@ -1,4 +1,9 @@
-import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -7,20 +12,34 @@ export default async function PartnerPage() {
   const itemsResult = await safePrismaQuery(
     prisma.partnerLogo.findMany({})
   );
-  const items = itemsResult.status === "success" ? itemsResult.data : [];
+  if (itemsResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(itemsResult.reason, "admin")}</div>;
+  }
+
+  const items = itemsResult.data;
 
   async function add(formData: FormData) {
     "use server";
     const title = String(formData.get("title")||"");
     const url = String(formData.get("url")||"");
     const image = String(formData.get("image")||"");
-    await prisma.partnerLogo.create({ data: { title, url, image } });
+    const result = await safePrismaAction(() =>
+      prisma.partnerLogo.create({ data: { title, url, image } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   async function del(formData: FormData) {
     "use server";
     const id = String(formData.get("id")||"");
-    await prisma.partnerLogo.delete({ where: { id } });
+    const result = await safePrismaAction(() =>
+      prisma.partnerLogo.delete({ where: { id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   return (
@@ -47,9 +66,7 @@ export default async function PartnerPage() {
             {items.length === 0 && (
               <tr>
                 <td colSpan={3}>
-                  {itemsResult.status === "skipped"
-                    ? prismaUnavailableMessage(itemsResult.reason, "admin")
-                    : "Belum ada partner."}
+                  Belum ada partner.
                 </td>
               </tr>
             )}

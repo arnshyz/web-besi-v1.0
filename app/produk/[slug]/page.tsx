@@ -1,5 +1,7 @@
 import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProdukDetail({ params }: { params: { slug: string } }) {
   const productResult = await safePrismaQuery(
     prisma.product.findUnique({ where: { slug: params.slug }, include: { variants: true, images: true, category: true } })

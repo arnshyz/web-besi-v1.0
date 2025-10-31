@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
-import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
 
 export default async function NewCategory() {
@@ -17,7 +22,13 @@ export default async function NewCategory() {
     const name = String(formData.get("name") || "");
     const slug = String(formData.get("slug") || "");
     const parentId = String(formData.get("parentId") || "") || null;
-    await prisma.category.create({ data: { name, slug, parentId: parentId || null } });
+    const result = await safePrismaAction(() =>
+      prisma.category.create({ data: { name, slug, parentId: parentId || null } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/kategori");
   }
 
