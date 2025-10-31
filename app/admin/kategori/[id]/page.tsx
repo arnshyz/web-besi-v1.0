@@ -1,25 +1,60 @@
-import { prisma } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function EditCategory({ params }: { params: { id: string } }) {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const c = await prisma.category.findUnique({ where: { id: params.id } });
-  const cats = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const categoryResult = await safePrismaQuery(
+    prisma.category.findUnique({ where: { id: params.id } })
+  );
+  const listResult = await safePrismaQuery(
+    prisma.category.findMany({ orderBy: { name: "asc" } })
+  );
+  if (categoryResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(categoryResult.reason, "admin")}</div>;
+  }
+  if (listResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(listResult.reason, "admin")}</div>;
+  }
+  const c = categoryResult.data;
+  const cats = listResult.data;
   if (!c) redirect("/admin/kategori");
 
   async function save(formData: FormData) {
     "use server";
+    if (!c) {
+      throw new Error("Category not found");
+    }
     const name = String(formData.get("name") || "");
     const slug = String(formData.get("slug") || "");
     const parentId = String(formData.get("parentId") || "") || null;
-    await prisma.category.update({ where: { id: c.id }, data: { name, slug, parentId: parentId || null } });
+    const result = await safePrismaAction(() =>
+      prisma.category.update({ where: { id: c.id }, data: { name, slug, parentId: parentId || null } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/kategori");
   }
 
   async function remove() {
     "use server";
-    await prisma.category.delete({ where: { id: c.id } });
+    if (!c) {
+      throw new Error("Category not found");
+    }
+    const result = await safePrismaAction(() =>
+      prisma.category.delete({ where: { id: c.id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/kategori");
   }
 

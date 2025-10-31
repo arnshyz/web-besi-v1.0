@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaAction, safePrismaQuery } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
 
 export default async function NewProduct() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
+
+  const availability = await safePrismaQuery(prisma.product.count());
+  if (availability.status === "skipped") {
+    return <div>{prismaUnavailableMessage(availability.reason, "admin")}</div>;
+  }
 
   async function create(formData: FormData) {
     "use server";
@@ -11,7 +16,13 @@ export default async function NewProduct() {
     const slug = String(formData.get("slug") || "");
     const priceMin = formData.get("priceMin") ? Number(formData.get("priceMin")) : null;
     const featured = formData.get("featured") === "on";
-    await prisma.product.create({ data: { name, slug, priceMin, featured } });
+    const result = await safePrismaAction(() =>
+      prisma.product.create({ data: { name, slug, priceMin, featured } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/produk");
   }
 

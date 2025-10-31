@@ -1,24 +1,51 @@
-import { prisma } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function EditPage({ params }: { params: { id: string } }) {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const p = await prisma.page.findUnique({ where: { id: params.id } });
+  const pageResult = await safePrismaQuery(
+    prisma.page.findUnique({ where: { id: params.id } })
+  );
+  if (pageResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(pageResult.reason, "admin")}</div>;
+  }
+  const p = pageResult.data;
   if (!p) redirect("/admin/pages");
 
   async function save(formData: FormData) {
     "use server";
+    if (!p) {
+      throw new Error("Page not found");
+    }
     const title = String(formData.get("title") || "");
     const slug = String(formData.get("slug") || "");
     const content = String(formData.get("content") || "");
-    await prisma.page.update({ where: { id: p.id }, data: { title, slug, content } });
+    const result = await safePrismaAction(() =>
+      prisma.page.update({ where: { id: p.id }, data: { title, slug, content } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/pages");
   }
 
   async function remove() {
     "use server";
-    await prisma.page.delete({ where: { id: p.id } });
+    if (!p) {
+      throw new Error("Page not found");
+    }
+    const result = await safePrismaAction(() => prisma.page.delete({ where: { id: p.id } }));
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+      return;
+    }
     redirect("/admin/pages");
   }
 

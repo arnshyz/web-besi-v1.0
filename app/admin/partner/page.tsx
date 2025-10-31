@@ -1,23 +1,45 @@
-import { prisma } from "@/lib/prisma";
+import {
+  prisma,
+  prismaUnavailableMessage,
+  safePrismaAction,
+  safePrismaQuery,
+} from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function PartnerPage() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const items = await prisma.partnerLogo.findMany({});
+  const itemsResult = await safePrismaQuery(
+    prisma.partnerLogo.findMany({})
+  );
+  if (itemsResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(itemsResult.reason, "admin")}</div>;
+  }
+
+  const items = itemsResult.data;
 
   async function add(formData: FormData) {
     "use server";
     const title = String(formData.get("title")||"");
     const url = String(formData.get("url")||"");
     const image = String(formData.get("image")||"");
-    await prisma.partnerLogo.create({ data: { title, url, image } });
+    const result = await safePrismaAction(() =>
+      prisma.partnerLogo.create({ data: { title, url, image } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   async function del(formData: FormData) {
     "use server";
     const id = String(formData.get("id")||"");
-    await prisma.partnerLogo.delete({ where: { id } });
+    const result = await safePrismaAction(() =>
+      prisma.partnerLogo.delete({ where: { id } })
+    );
+    if (result.status === "skipped") {
+      console.warn(prismaUnavailableMessage(result.reason, "admin"));
+    }
   }
 
   return (
@@ -41,6 +63,13 @@ export default async function PartnerPage() {
                 <td><form action={del}><input type="hidden" name="id" value={s.id}/><button className="btn">Hapus</button></form></td>
               </tr>
             ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={3}>
+                  Belum ada partner.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

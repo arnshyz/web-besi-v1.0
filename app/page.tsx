@@ -1,13 +1,21 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
-  const [slides, featured, partners, testimonials] = await Promise.all([
-    prisma.heroSlide.findMany({ orderBy: { sort: "asc" } }),
-    prisma.product.findMany({ where: { featured: true }, take: 8 }),
-    prisma.partnerLogo.findMany({}),
-    prisma.testimonial.findMany({ take: 6, orderBy: { createdAt: "desc" } }),
+  const [slidesResult, partnersResult, testimonialsResult] = await Promise.all([
+    safePrismaQuery(prisma.heroSlide.findMany({ orderBy: { sort: "asc" } })),
+    safePrismaQuery(prisma.partnerLogo.findMany({})),
+    safePrismaQuery(prisma.testimonial.findMany({ take: 6, orderBy: { createdAt: "desc" } })),
   ]);
+  const featuredResult = await safePrismaQuery(
+    prisma.product.findMany({ where: { featured: true }, take: 8 })
+  );
+  const slides = slidesResult.status === "success" ? slidesResult.data : [];
+  const partners = partnersResult.status === "success" ? partnersResult.data : [];
+  const testimonials = testimonialsResult.status === "success" ? testimonialsResult.data : [];
+  const featured = featuredResult.status === "success" ? featuredResult.data : [];
 
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
 
@@ -22,7 +30,13 @@ export default async function Home() {
             <a className="btn" href={`https://wa.me/${wa}?text=Halo%20saya%20butuh%20penawaran`}>Chat WhatsApp</a>
           </div>
           <div>
-            {slides.length === 0 ? <div className="card">Tambahkan slide di Admin</div> :
+            {slides.length === 0 ? (
+              <div className="card">
+                {slidesResult.status === "skipped"
+                  ? prismaUnavailableMessage(slidesResult.reason)
+                  : "Tambahkan slide di Admin"}
+              </div>
+            ) : (
               <div className="grid" style={{gridTemplateColumns:`repeat(${Math.min(3, slides.length)}, 1fr)`}}>
                 {slides.slice(0,3).map(s => (
                   <div key={s.id} className="card">
@@ -30,7 +44,8 @@ export default async function Home() {
                     <div className="mt-2"><b>{s.title}</b><div className="text-sm" style={{color:"#777"}}>{s.subtitle}</div></div>
                   </div>
                 ))}
-              </div>}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -48,7 +63,13 @@ export default async function Home() {
               {p.priceMin != null ? <div className="text-sm">Mulai Rp {p.priceMin.toLocaleString("id-ID")}</div> : <div className="text-sm">Hubungi CS</div>}
             </Link>
           ))}
-          {featured.length===0 && <div>Belum ada produk unggulan.</div>}
+          {featured.length===0 && (
+            <div>
+              {featuredResult.status === "skipped"
+                ? prismaUnavailableMessage(featuredResult.reason)
+                : "Belum ada produk unggulan."}
+            </div>
+          )}
         </div>
       </section>
 
@@ -61,7 +82,13 @@ export default async function Home() {
               <img src={p.image} alt={p.title} style={{width:"100%", height:60, objectFit:"contain"}}/>
             </a>
           ))}
-          {partners.length===0 && <div>Belum ada logo partner.</div>}
+          {partners.length===0 && (
+            <div>
+              {partnersResult.status === "skipped"
+                ? prismaUnavailableMessage(partnersResult.reason)
+                : "Belum ada logo partner."}
+            </div>
+          )}
         </div>
       </section>
 
@@ -75,7 +102,13 @@ export default async function Home() {
               <div className="mt-2"><span className="badge">{t.author}</span></div>
             </div>
           ))}
-          {testimonials.length===0 && <div>Belum ada testimoni.</div>}
+          {testimonials.length===0 && (
+            <div>
+              {testimonialsResult.status === "skipped"
+                ? prismaUnavailableMessage(testimonialsResult.reason)
+                : "Belum ada testimoni."}
+            </div>
+          )}
         </div>
       </section>
     </div>
