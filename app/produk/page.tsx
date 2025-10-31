@@ -1,8 +1,11 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function ProdukList() {
-  const products = await prisma.product.findMany({ orderBy: { updatedAt: "desc" }, take: 50 });
+  const result = await safePrismaQuery(
+    prisma.product.findMany({ orderBy: { updatedAt: "desc" }, take: 50 })
+  );
+  const products = result.status === "success" ? result.data : [];
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-3">Katalog Produk</h1>
@@ -13,7 +16,13 @@ export default async function ProdukList() {
             {p.priceMin != null ? <div className="text-sm">Mulai Rp {p.priceMin.toLocaleString("id-ID")}</div> : <div className="text-sm">Hubungi CS</div>}
           </Link>
         ))}
-        {products.length===0 && <div>Belum ada produk.</div>}
+        {products.length===0 && (
+          <div>
+            {result.status === "skipped"
+              ? prismaUnavailableMessage(result.reason)
+              : "Belum ada produk."}
+          </div>
+        )}
       </div>
     </div>
   );

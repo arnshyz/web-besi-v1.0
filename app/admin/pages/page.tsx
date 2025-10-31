@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { Toolbar } from "../_ui";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
@@ -6,7 +6,10 @@ import Link from "next/link";
 
 export default async function PagesList() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const items = await prisma.page.findMany({ orderBy: { updatedAt: "desc" } });
+  const itemsResult = await safePrismaQuery(
+    prisma.page.findMany({ orderBy: { updatedAt: "desc" } })
+  );
+  const items = itemsResult.status === "success" ? itemsResult.data : [];
   return (
     <div>
       <Toolbar title="Pages" createHref="/admin/pages/new"/>
@@ -20,6 +23,15 @@ export default async function PagesList() {
               <td><Link href={`/admin/pages/${i.id}`}>Edit</Link></td>
             </tr>
           ))}
+          {items.length === 0 && (
+            <tr>
+              <td colSpan={3}>
+                {itemsResult.status === "skipped"
+                  ? prismaUnavailableMessage(itemsResult.reason, "admin")
+                  : "Belum ada halaman."}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

@@ -1,10 +1,13 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
 export default async function HeroPage() {
   const ok = await isAdmin(); if (!ok) redirect("/admin/login");
-  const slides = await prisma.heroSlide.findMany({ orderBy: { sort: "asc" } });
+  const slidesResult = await safePrismaQuery(
+    prisma.heroSlide.findMany({ orderBy: { sort: "asc" } })
+  );
+  const slides = slidesResult.status === "success" ? slidesResult.data : [];
 
   async function add(formData: FormData) {
     "use server";
@@ -48,6 +51,15 @@ export default async function HeroPage() {
                 </td>
               </tr>
             ))}
+            {slides.length === 0 && (
+              <tr>
+                <td colSpan={3}>
+                  {slidesResult.status === "skipped"
+                    ? prismaUnavailableMessage(slidesResult.reason, "admin")
+                    : "Belum ada slide."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

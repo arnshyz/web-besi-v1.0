@@ -26,7 +26,7 @@ Buka:
 - `http://localhost:3000/admin` (login pakai ADMIN_PASSWORD)
 
 ## Deploy cepat (Vercel)
-- Set `DATABASE_URL` ke Neon/Postgres atau gunakan `file:./dev.db` dengan Prisma Accelerate disabled.
+- Set `DATABASE_URL` ke Neon/Postgres (enum Prisma membutuhkan database yang mendukung enum seperti Postgres).
 - Set `ADMIN_PASSWORD` dan `NEXT_PUBLIC_*` di dashboard Vercel.
 - Jalankan `npm run prisma:push` sebagai build command tambahan jika perlu.
 

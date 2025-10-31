@@ -1,7 +1,13 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 
 export default async function ProdukDetail({ params }: { params: { slug: string } }) {
-  const product = await prisma.product.findUnique({ where: { slug: params.slug }, include: { variants: true, images: true, category: true } });
+  const productResult = await safePrismaQuery(
+    prisma.product.findUnique({ where: { slug: params.slug }, include: { variants: true, images: true, category: true } })
+  );
+  if (productResult.status === "skipped") {
+    return <div>{prismaUnavailableMessage(productResult.reason)}</div>;
+  }
+  const product = productResult.data;
   if (!product) return <div>Produk tidak ditemukan.</div>;
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
   const price = product.priceMin != null ? `Mulai Rp ${product.priceMin.toLocaleString("id-ID")}` : "Hubungi CS";
