@@ -9,6 +9,9 @@ export default async function EditProduct({ params }: { params: { id: string } }
 
   async function save(formData: FormData) {
     "use server";
+    if (!p) {
+      throw new Error("Product not found");
+    }
     const name = String(formData.get("name") || "");
     const slug = String(formData.get("slug") || "");
     const priceMin = formData.get("priceMin") ? Number(formData.get("priceMin")) : null;
@@ -19,6 +22,9 @@ export default async function EditProduct({ params }: { params: { id: string } }
 
   async function remove() {
     "use server";
+    if (!p) {
+      throw new Error("Product not found");
+    }
     await prisma.product.delete({ where: { id: p.id } });
     redirect("/admin/produk");
   }
