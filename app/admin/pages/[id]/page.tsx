@@ -9,6 +9,9 @@ export default async function EditPage({ params }: { params: { id: string } }) {
 
   async function save(formData: FormData) {
     "use server";
+    if (!p) {
+      throw new Error("Page not found");
+    }
     const title = String(formData.get("title") || "");
     const slug = String(formData.get("slug") || "");
     const content = String(formData.get("content") || "");
@@ -18,6 +21,9 @@ export default async function EditPage({ params }: { params: { id: string } }) {
 
   async function remove() {
     "use server";
+    if (!p) {
+      throw new Error("Page not found");
+    }
     await prisma.page.delete({ where: { id: p.id } });
     redirect("/admin/pages");
   }
