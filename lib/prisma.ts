@@ -10,9 +10,11 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+export type SafePrismaSkipReason = "missing-table" | "client-init";
+
 export type SafePrismaResult<T> =
   | { status: "success"; data: T }
-  | { status: "skipped"; reason: "missing-table" | "client-init"; message: string };
+  | { status: "skipped"; reason: SafePrismaSkipReason };
 
 export function isPrismaMissingTableError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021";
@@ -30,15 +32,30 @@ export async function safePrismaQuery<T>(promise: Promise<T>): Promise<SafePrism
     if (isPrismaMissingTableError(error)) {
       const meta = typeof error.meta === "object" && error.meta !== null ? error.meta : undefined;
       const modelName = typeof meta?.modelName === "string" ? meta.modelName : undefined;
-      const message = modelName ? `Prisma table for model "${modelName}" is missing. Skipping query.` : "Prisma table is missing. Skipping query.";
+      const message = modelName
+        ? `Prisma table for model "${modelName}" is missing. Skipping query.`
+        : "Prisma table is missing. Skipping query.";
       console.warn(message);
-      return { status: "skipped", reason: "missing-table", message };
+      return { status: "skipped", reason: "missing-table" };
     }
     if (isPrismaInitializationError(error)) {
       const message = "Prisma client could not initialize. Ensure the DATABASE_URL environment variable is set.";
       console.warn(message);
-      return { status: "skipped", reason: "client-init", message };
+      return { status: "skipped", reason: "client-init" };
     }
     throw error;
   }
+}
+
+export function prismaUnavailableMessage(
+  reason: SafePrismaSkipReason,
+  audience: "public" | "admin" = "public"
+): string {
+  if (audience === "admin") {
+    return reason === "client-init"
+      ? "Tidak dapat menghubungkan ke database. Pastikan variabel lingkungan DATABASE_URL sudah disetel."
+      : "Skema database belum lengkap. Jalankan migrasi Prisma sebelum melanjutkan.";
+  }
+
+  return "Data tidak tersedia saat ini. Silakan coba lagi nanti.";
 }

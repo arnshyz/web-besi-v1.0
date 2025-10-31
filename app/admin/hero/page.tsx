@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -54,7 +54,9 @@ export default async function HeroPage() {
             {slides.length === 0 && (
               <tr>
                 <td colSpan={3}>
-                  {slidesResult.status === "skipped" ? slidesResult.message : "Belum ada slide."}
+                  {slidesResult.status === "skipped"
+                    ? prismaUnavailableMessage(slidesResult.reason, "admin")
+                    : "Belum ada slide."}
                 </td>
               </tr>
             )}

@@ -1,11 +1,11 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 
 export default async function ProdukDetail({ params }: { params: { slug: string } }) {
   const productResult = await safePrismaQuery(
     prisma.product.findUnique({ where: { slug: params.slug }, include: { variants: true, images: true, category: true } })
   );
   if (productResult.status === "skipped") {
-    return <div>{productResult.message}</div>;
+    return <div>{prismaUnavailableMessage(productResult.reason)}</div>;
   }
   const product = productResult.data;
   if (!product) return <div>Produk tidak ditemukan.</div>;

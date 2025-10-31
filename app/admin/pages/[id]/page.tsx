@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -8,7 +8,7 @@ export default async function EditPage({ params }: { params: { id: string } }) {
     prisma.page.findUnique({ where: { id: params.id } })
   );
   if (pageResult.status === "skipped") {
-    return <div>{pageResult.message}</div>;
+    return <div>{prismaUnavailableMessage(pageResult.reason, "admin")}</div>;
   }
   const p = pageResult.data;
   if (!p) redirect("/admin/pages");

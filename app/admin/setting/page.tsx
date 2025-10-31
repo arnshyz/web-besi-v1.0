@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -8,7 +8,7 @@ export default async function SettingPage() {
     prisma.setting.upsert({ where: { id: 1 }, update: {}, create: { id:1 } })
   );
   if (settingResult.status === "skipped") {
-    return <div>{settingResult.message}</div>;
+    return <div>{prismaUnavailableMessage(settingResult.reason, "admin")}</div>;
   }
   const s = settingResult.data;
 

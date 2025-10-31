@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { Toolbar } from "../_ui";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
@@ -29,7 +29,7 @@ export default async function ProdukList() {
             <tr>
               <td colSpan={5}>
                 {itemsResult.status === "skipped"
-                  ? itemsResult.message
+                  ? prismaUnavailableMessage(itemsResult.reason, "admin")
                   : "Belum ada produk."}
               </td>
             </tr>

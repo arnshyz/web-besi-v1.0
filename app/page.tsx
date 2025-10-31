@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function Home() {
@@ -30,7 +30,9 @@ export default async function Home() {
           <div>
             {slides.length === 0 ? (
               <div className="card">
-                {slidesResult.status === "skipped" ? slidesResult.message : "Tambahkan slide di Admin"}
+                {slidesResult.status === "skipped"
+                  ? prismaUnavailableMessage(slidesResult.reason)
+                  : "Tambahkan slide di Admin"}
               </div>
             ) : (
               <div className="grid" style={{gridTemplateColumns:`repeat(${Math.min(3, slides.length)}, 1fr)`}}>
@@ -62,7 +64,7 @@ export default async function Home() {
           {featured.length===0 && (
             <div>
               {featuredResult.status === "skipped"
-                ? featuredResult.message
+                ? prismaUnavailableMessage(featuredResult.reason)
                 : "Belum ada produk unggulan."}
             </div>
           )}
@@ -80,7 +82,9 @@ export default async function Home() {
           ))}
           {partners.length===0 && (
             <div>
-              {partnersResult.status === "skipped" ? partnersResult.message : "Belum ada logo partner."}
+              {partnersResult.status === "skipped"
+                ? prismaUnavailableMessage(partnersResult.reason)
+                : "Belum ada logo partner."}
             </div>
           )}
         </div>
@@ -98,7 +102,9 @@ export default async function Home() {
           ))}
           {testimonials.length===0 && (
             <div>
-              {testimonialsResult.status === "skipped" ? testimonialsResult.message : "Belum ada testimoni."}
+              {testimonialsResult.status === "skipped"
+                ? prismaUnavailableMessage(testimonialsResult.reason)
+                : "Belum ada testimoni."}
             </div>
           )}
         </div>

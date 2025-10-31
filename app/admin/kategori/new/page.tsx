@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
 
 export default async function NewCategory() {
@@ -8,7 +8,7 @@ export default async function NewCategory() {
     prisma.category.findMany({ orderBy: { name: "asc" } })
   );
   if (catsResult.status === "skipped") {
-    return <div>{catsResult.message}</div>;
+    return <div>{prismaUnavailableMessage(catsResult.reason, "admin")}</div>;
   }
   const cats = catsResult.data;
 

@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function ProdukList() {
@@ -19,7 +19,7 @@ export default async function ProdukList() {
         {products.length===0 && (
           <div>
             {result.status === "skipped"
-              ? result.message
+              ? prismaUnavailableMessage(result.reason)
               : "Belum ada produk."}
           </div>
         )}

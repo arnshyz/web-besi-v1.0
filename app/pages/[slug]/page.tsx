@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
 export default async function CmsPage({ params }: { params: { slug: string } }) {
@@ -6,7 +6,7 @@ export default async function CmsPage({ params }: { params: { slug: string } }) 
     prisma.page.findUnique({ where: { slug: params.slug } })
   );
   if (pageResult.status === "skipped") {
-    return <div>{pageResult.message}</div>;
+    return <div>{prismaUnavailableMessage(pageResult.reason)}</div>;
   }
   const page = pageResult.data;
   if (!page) notFound();

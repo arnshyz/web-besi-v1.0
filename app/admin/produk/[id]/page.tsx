@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 
@@ -8,7 +8,7 @@ export default async function EditProduct({ params }: { params: { id: string } }
     prisma.product.findUnique({ where: { id: params.id } })
   );
   if (productResult.status === "skipped") {
-    return <div>{productResult.message}</div>;
+    return <div>{prismaUnavailableMessage(productResult.reason, "admin")}</div>;
   }
   const p = productResult.data;
   if (!p) redirect("/admin/produk");

@@ -1,4 +1,4 @@
-import { prisma, safePrismaQuery } from "@/lib/prisma";
+import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { Toolbar } from "../_ui";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
@@ -26,7 +26,9 @@ export default async function PagesList() {
           {items.length === 0 && (
             <tr>
               <td colSpan={3}>
-                {itemsResult.status === "skipped" ? itemsResult.message : "Belum ada halaman."}
+                {itemsResult.status === "skipped"
+                  ? prismaUnavailableMessage(itemsResult.reason, "admin")
+                  : "Belum ada halaman."}
               </td>
             </tr>
           )}
