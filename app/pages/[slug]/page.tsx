@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma, prismaUnavailableMessage, safePrismaQuery } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
@@ -13,9 +14,18 @@ export default async function CmsPage({ params }: { params: { slug: string } }) 
   const page = pageResult.data;
   if (!page) notFound();
   return (
-    <article className="card">
-      <h1 className="text-2xl font-semibold mb-3">{page.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: page.content }} />
-    </article>
+    <section className="section">
+      <div className="container">
+        <nav className="breadcrumb">
+          <Link href="/">Beranda</Link>
+          <span>/</span>
+          <span>{page.title}</span>
+        </nav>
+        <article className="card cms-article">
+          <h1 className="section-title" style={{ marginBottom: 24 }}>{page.title}</h1>
+          <div className="cms-content" dangerouslySetInnerHTML={{ __html: page.content }} />
+        </article>
+      </div>
+    </section>
   );
 }
