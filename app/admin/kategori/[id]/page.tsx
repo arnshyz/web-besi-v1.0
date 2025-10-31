@@ -10,6 +10,9 @@ export default async function EditCategory({ params }: { params: { id: string } 
 
   async function save(formData: FormData) {
     "use server";
+    if (!c) {
+      throw new Error("Category not found");
+    }
     const name = String(formData.get("name") || "");
     const slug = String(formData.get("slug") || "");
     const parentId = String(formData.get("parentId") || "") || null;
@@ -19,6 +22,9 @@ export default async function EditCategory({ params }: { params: { id: string } 
 
   async function remove() {
     "use server";
+    if (!c) {
+      throw new Error("Category not found");
+    }
     await prisma.category.delete({ where: { id: c.id } });
     redirect("/admin/kategori");
   }
